@@ -1,55 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { config } from "../config";
-import { jwtDecode } from "jwt-decode";
 import PropTypes from "prop-types";
 
-const Profile = ({ isOpen, onClose }) => {
-  const [user, setUser] = useState(null);
+const Profile = ({ isOpen, onClose, user, onUpdate }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [surname, setSurname] = useState("");
+  const [name, setName] = useState(user?.name || "");
+  const [surname, setSurname] = useState(user?.surname || "");
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (isOpen) {
-      const token = localStorage.getItem("accessToken");
-      if (token) {
-        try {
-          const decoded = jwtDecode(token);
-          fetchUserData(decoded.id, token);
-        } catch (err) {
-          console.error("Token decode error:", err);
-          setError("Token xatosi");
-        }
-      }
-    }
-  }, [isOpen]);
-
-  const fetchUserData = async (userId, token) => {
-    try {
-      const response = await fetch(`${config.apiUrl}/user/${userId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setUser(data);
-        setName(data.name || "");
-        setSurname(data.surname || "");
-        setError("");
-      } else {
-        setError(data.msg);
-      }
-    } catch (err) {
-      setError("Xatolik yuz berdi");
-    }
-  };
 
   const handleUpdate = async (e) => {
     e.preventDefault();
@@ -67,7 +27,7 @@ const Profile = ({ isOpen, onClose }) => {
       const data = await response.json();
 
       if (response.ok) {
-        setUser((prev) => ({ ...prev, name, surname }));
+        onUpdate({ ...user, name, surname });
         setIsEditModalOpen(false);
         setError("");
       } else {
@@ -250,6 +210,12 @@ const Profile = ({ isOpen, onClose }) => {
 Profile.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
+  user: PropTypes.shape({
+    name: PropTypes.string,
+    surname: PropTypes.string,
+    phone: PropTypes.string,
+  }),
+  onUpdate: PropTypes.func.isRequired,
 };
 
 export default Profile;

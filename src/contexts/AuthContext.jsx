@@ -1,30 +1,27 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import Login from "../components/Login";
-import Profile from "../components/Profile";
 import { config } from "../config";
+import { AppContext } from "./AppContext";
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
+
+  // Get showAlert from App context
+  const { showAlert } = useContext(AppContext);
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
     if (token) {
       setIsAuthenticated(true);
-      // You can decode the token to get user info if needed
-      // Or make an API call to get user details
     }
   }, []);
 
   const openLoginModal = () => setIsLoginModalOpen(true);
   const closeLoginModal = () => setIsLoginModalOpen(false);
-
-  const openProfileModal = () => setIsProfileModalOpen(true);
-  const closeProfileModal = () => setIsProfileModalOpen(false);
 
   const login = (token) => {
     localStorage.setItem("accessToken", token);
@@ -39,10 +36,12 @@ export const AuthProvider = ({ children }) => {
         headers: {
           "Content-Type": "application/json",
         },
+        withCredentials: true,
       });
 
       if (response.ok) {
         localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
         setIsAuthenticated(false);
         setUser(null);
         window.location.reload();
@@ -58,7 +57,6 @@ export const AuthProvider = ({ children }) => {
         isAuthenticated,
         user,
         openLoginModal,
-        openProfileModal,
         login,
         logout,
       }}
@@ -68,8 +66,8 @@ export const AuthProvider = ({ children }) => {
         isOpen={isLoginModalOpen}
         onClose={closeLoginModal}
         onLogin={login}
+        showAlert={showAlert}
       />
-      <Profile isOpen={isProfileModalOpen} onClose={closeProfileModal} />
     </AuthContext.Provider>
   );
 };

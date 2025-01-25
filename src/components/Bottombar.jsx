@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from "react";
-import { Link, useLocation, NavLink } from "react-router-dom";
+import { useEffect, useRef } from "react";
+import { useLocation, NavLink } from "react-router-dom";
 import {
   HomeIcon,
   ShoppingBagIcon,

@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { config } from "../config";
+import PropTypes from "prop-types";
 
-const Login = ({ isOpen, onClose, onLogin }) => {
-  const [step, setStep] = useState("phone"); // phone, password, register, otp
+const Login = ({ isOpen, onClose, onLogin, showAlert }) => {
+  const [step, setStep] = useState("phone");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -15,20 +16,25 @@ const Login = ({ isOpen, onClose, onLogin }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handlePhoneChange = (e) => {
-    const inputValue = e.target.value;
-    // Remove the prefix and any spaces from the input
-    const cleanValue = inputValue.replace(/^\+998\s?/, "").replace(/\s/g, "");
-    // Remove any non-digits
-    const numbersOnly = cleanValue.replace(/\D/g, "");
+  const formatPhoneNumber = (value) => {
+    // Remove all non-digits
+    const number = value.replace(/\D/g, "");
 
-    // Always allow backspace by checking if the new value is shorter
-    if (
-      numbersOnly.length <= 9 &&
-      (phone.length > numbersOnly.length || numbersOnly.length <= 9)
-    ) {
-      setPhone(numbersOnly);
-      setError("");
+    // Format as 90 123 45 67
+    if (number.length <= 2) return number;
+    if (number.length <= 5) return `${number.slice(0, 2)} ${number.slice(2)}`;
+    if (number.length <= 7)
+      return `${number.slice(0, 2)} ${number.slice(2, 5)} ${number.slice(5)}`;
+    return `${number.slice(0, 2)} ${number.slice(2, 5)} ${number.slice(
+      5,
+      7
+    )} ${number.slice(7, 9)}`;
+  };
+
+  const handlePhoneChange = (e) => {
+    const inputValue = e.target.value.replace(/\D/g, "");
+    if (inputValue.length <= 9) {
+      setPhone(inputValue);
     }
   };
 
@@ -59,33 +65,52 @@ const Login = ({ isOpen, onClose, onLogin }) => {
 
       const checkData = await checkResponse.json();
 
-      // Status 302 means user was found
       if (checkResponse.status === 302 && checkData.found) {
         if (checkData.isVerified) {
           if (checkData.isRegistered) {
-            // If user is verified and registered, show password input
             setShowPassword(true);
+            showAlert("Parolni kiriting", "success");
           } else {
-            // If user is verified but not registered, show registration form
             setShowRegister(true);
+            showAlert("Ro'yxatdan o'tishni yakunlang", "success");
           }
         } else {
-          // If not verified, send OTP
-          await sendOtp();
+          const response = await fetch(`${config.apiUrl}/user/send`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ phone }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok || data.otpId) {
+            setOtpId(data.otpId);
+            setShowOtp(true);
+            setError("");
+            if (data.msg === "Tasdiqlash kodi avval yuborilgan") {
+              showAlert("Tasdiqlash kodi avval yuborilgan", "success");
+            } else {
+              showAlert("Tasdiqlash kodi yuborildi", "success");
+            }
+          } else {
+            setError(data.msg || "Xatolik yuz berdi");
+            showAlert(data.msg || "Xatolik yuz berdi", "error");
+          }
         }
       } else {
-        // User not found (404) or other cases, send OTP for new user
         await sendOtp();
       }
     } catch (err) {
       console.error("Phone submit error:", err);
       setError("Xatolik yuz berdi");
+      showAlert("Xatolik yuz berdi", "error");
     } finally {
       setLoading(false);
     }
   };
 
-  // Helper function to send OTP
   const sendOtp = async () => {
     try {
       const response = await fetch(`${config.apiUrl}/user/create`, {
@@ -126,6 +151,7 @@ const Login = ({ isOpen, onClose, onLogin }) => {
           phone,
           password,
         }),
+        withCredentials: true,
       });
 
       const data = await response.json();
@@ -134,12 +160,15 @@ const Login = ({ isOpen, onClose, onLogin }) => {
         localStorage.setItem("accessToken", data.accessToken);
         localStorage.setItem("refreshToken", data.refreshToken);
         onClose();
+        showAlert("Muvaffaqiyatli kirdingiz", "success");
         window.location.reload();
       } else {
         setError(data.msg || "Xatolik yuz berdi");
+        showAlert(data.msg || "Xatolik yuz berdi", "error");
       }
     } catch (err) {
       setError("Xatolik yuz berdi");
+      showAlert("Xatolik yuz berdi", "error");
     } finally {
       setLoading(false);
     }
@@ -151,7 +180,6 @@ const Login = ({ isOpen, onClose, onLogin }) => {
     setError("");
 
     try {
-      // First register the user
       const response = await fetch(`${config.apiUrl}/user/register`, {
         method: "POST",
         headers: {
@@ -163,12 +191,13 @@ const Login = ({ isOpen, onClose, onLogin }) => {
           surname,
           password,
         }),
+        withCredentials: true,
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        // After successful registration, try to login
+        showAlert("Muvaffaqiyatli ro'yxatdan o'tdingiz", "success");
         const loginResponse = await fetch(`${config.apiUrl}/user/login`, {
           method: "POST",
           headers: {
@@ -178,6 +207,7 @@ const Login = ({ isOpen, onClose, onLogin }) => {
             phone,
             password,
           }),
+          withCredentials: true,
         });
 
         const loginData = await loginResponse.json();
@@ -189,13 +219,16 @@ const Login = ({ isOpen, onClose, onLogin }) => {
           window.location.reload();
         } else {
           setError(loginData.msg || "Kirish xatoligi yuz berdi");
+          showAlert(loginData.msg || "Kirish xatoligi yuz berdi", "error");
         }
       } else {
         setError(data.msg || "Ro'yxatdan o'tishda xatolik yuz berdi");
+        showAlert(data.msg || "Ro'yxatdan o'tishda xatolik yuz berdi", "error");
       }
     } catch (err) {
       console.error("Registration error:", err);
       setError("Xatolik yuz berdi");
+      showAlert("Xatolik yuz berdi", "error");
     } finally {
       setLoading(false);
     }
@@ -217,43 +250,23 @@ const Login = ({ isOpen, onClose, onLogin }) => {
           otp,
           otpId,
         }),
+        withCredentials: true,
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        // After successful verification, reidentify the user
-        const checkResponse = await fetch(`${config.apiUrl}/user/identify`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ phone }),
-        });
-
-        const checkData = await checkResponse.json();
-
-        if (checkResponse.status === 302 && checkData.found) {
-          if (checkData.isVerified && !checkData.isRegistered) {
-            // If verified but not registered, show registration form
-            setShowRegister(true);
-            setShowOtp(false);
-          } else if (checkData.isVerified && checkData.isRegistered) {
-            // If verified and registered, complete login
-            localStorage.setItem("accessToken", data.accessToken);
-            localStorage.setItem("refreshToken", data.refreshToken);
-            onClose();
-            window.location.reload();
-          }
-        } else {
-          setError("Foydalanuvchi topilmadi");
-        }
+        setShowRegister(true);
+        setShowOtp(false);
+        showAlert("Telefon raqam tasdiqlandi", "success");
       } else {
         setError(data.msg || "Xatolik yuz berdi");
+        showAlert(data.msg || "Xatolik yuz berdi", "error");
       }
     } catch (err) {
       console.error("Verify OTP error:", err);
       setError("Xatolik yuz berdi");
+      showAlert("Xatolik yuz berdi", "error");
     } finally {
       setLoading(false);
     }
@@ -267,6 +280,7 @@ const Login = ({ isOpen, onClose, onLogin }) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ phone }),
+        withCredentials: true,
       });
 
       const data = await response.json();
@@ -330,12 +344,12 @@ const Login = ({ isOpen, onClose, onLogin }) => {
             <div className="phone-input-wrapper">
               <span className="phone-prefix">+998</span>
               <input
-                type="tel"
+                type="text"
                 placeholder="90 123 45 67"
-                value={formatPhoneForDisplay(phone).slice(5)} // Remove +998 prefix
+                value={formatPhoneNumber(phone)}
                 onChange={handlePhoneChange}
-                className="modal-input phone-input"
-                maxLength={12}
+                className="phone-input"
+                maxLength={13}
               />
             </div>
             <button type="submit" className="modal-button" disabled={loading}>
@@ -403,6 +417,13 @@ const Login = ({ isOpen, onClose, onLogin }) => {
       </div>
     </div>
   );
+};
+
+Login.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onLogin: PropTypes.func.isRequired,
+  showAlert: PropTypes.func.isRequired,
 };
 
 export default Login;

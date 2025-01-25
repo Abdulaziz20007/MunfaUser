@@ -65,10 +65,11 @@ const Checkout = () => {
     setError("");
 
     try {
-      const response = await fetchWithAuth(`${config.apiUrl}/order`, {
+      const response = await fetchWithAuth(`${config.apiUrl}/user/order`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
         body: JSON.stringify({
           items: cart.map((item) => ({
