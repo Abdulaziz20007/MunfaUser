@@ -33,15 +33,14 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await fetch(`${config.apiUrl}/user/logout`, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
-        withCredentials: true,
       });
 
       if (response.ok) {
         localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
         setIsAuthenticated(false);
         setUser(null);
         window.location.reload();

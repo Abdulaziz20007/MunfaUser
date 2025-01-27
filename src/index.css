@@ -12,6 +12,11 @@ body {
   min-height: 100vh;
 }
 
+#root {
+  min-height: 100vh;
+  margin-bottom: 100px;
+}
+
 /* Bottom Navigation */
 .bottom-nav {
   position: fixed;
@@ -61,6 +66,7 @@ body {
   max-width: 1280px;
   margin: 0 auto;
   padding: 0 16px;
+  padding-top: 16px;
 }
 
 /* Product Grid and Container Styles */
@@ -386,23 +392,38 @@ body {
 
 /* Header Styles */
 .header {
-  background-color: white;
-  border-bottom: 1px solid #e5e7eb;
-  padding: 12px 0;
-  margin-bottom: 24px;
-}
-
-.header-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 16px;
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 5px 30px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 50;
+  border-bottom: 1px solid rgba(229, 231, 235, 0.3);
+  padding: 16px;
+  border-radius: 12px;
 }
 
 .header-content {
+  max-width: 1280px;
+  margin: 0 auto;
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  padding: 8px 0;
+  align-items: center;
+}
+
+.header-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }
 
 .logo {
@@ -451,11 +472,14 @@ body {
   padding: 0 6px;
 }
 
-/* Make products grid responsive */
+/* Update mobile styles to maintain glass effect */
 @media (max-width: 640px) {
   .header {
-    padding: 8px 0;
-    margin-bottom: 16px;
+    padding: 8px 16px;
+    margin-bottom: 0;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
   }
 
   .logo {
@@ -572,12 +596,38 @@ body {
   background: #f3f4f6;
 }
 
+.quantity-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.quantity-btn[title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  background: #374151;
+  color: white;
+  font-size: 12px;
+  border-radius: 4px;
+  white-space: nowrap;
+  z-index: 10;
+  margin-bottom: 8px;
+}
+
 .quantity {
   font-size: 14px;
   font-weight: 500;
   min-width: 24px;
   text-align: center;
   color: #1f2937;
+}
+
+.available-stock {
+  font-size: 12px;
+  color: #4b5563;
 }
 
 .remove-btn {
@@ -740,33 +790,51 @@ body {
 }
 
 .modal-button {
-  flex: 1;
-  padding: 10px;
-  border-radius: 6px;
-  font-size: 14px;
+  width: 100%;
+  padding: 12px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
+  margin-top: 16px;
 }
 
-.modal-button:not(.secondary) {
-  background: #3b82f6;
-  color: white;
-  border: none;
+.modal-button:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
 }
 
-.modal-button:not(.secondary):hover {
-  background: #2563eb;
+.modal-button:active {
+  transform: translateY(0);
+}
+
+.modal-button:disabled {
+  background: #93c5fd;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .modal-button.secondary {
-  background: white;
-  color: #6b7280;
-  border: 1px solid #e5e7eb;
+  background: #f3f4f6;
+  color: #4b5563;
 }
 
 .modal-button.secondary:hover {
-  background: #f9fafb;
+  background: #e5e7eb;
+}
+
+.modal-button.browse-button {
+  margin-top: 24px;
+  background: #2563eb;
+  color: white;
+}
+
+.modal-button.browse-button:hover {
+  background: #1d4ed8;
 }
 
 .error-message {
@@ -860,10 +928,6 @@ input[type="password"] {
   font-size: 16px;
   color: #1f2937;
   font-weight: 500;
-}
-
-.edit-button {
-  margin-top: 16px;
 }
 
 .edit-modal {
@@ -1278,6 +1342,7 @@ textarea.modal-input.comment {
   height: 100%;
   object-fit: contain;
   padding: 16px;
+  border-radius: 50px;
 }
 
 .image-thumbnails {
@@ -2061,28 +2126,64 @@ textarea.modal-input.comment {
 
 .order-actions {
   display: flex;
-  align-items: center;
-  gap: 16px;
+  gap: 12px;
+  margin-top: 12px;
 }
 
-.cancel-button {
-  padding: 6px 12px;
-  border-radius: 6px;
-  border: 1px solid #ef4444;
-  background: white;
-  color: #ef4444;
+.order-actions .edit-button,
+.order-actions .cancel-button {
+  flex: 1;
+  min-width: 120px;
+  padding: 10px;
   font-size: 14px;
   font-weight: 500;
+  border: none;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
-  margin-top: 16px;
-  display: block;
+  text-align: center;
 }
 
-.cancel-button:hover {
-  background: #fef2f2;
+.order-actions .edit-button {
+  background: #f3f4f6;
+  color: #4b5563;
 }
 
+.order-actions .edit-button:hover {
+  background: #e5e7eb;
+}
+
+.order-actions .cancel-button {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.order-actions .cancel-button:hover {
+  background: #fecaca;
+}
+
+.order-actions .cancel-button:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.order-actions .cancel-button:disabled:hover {
+  background: #f3f4f6;
+}
+
+@media (max-width: 640px) {
+  .order-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .order-actions .edit-button,
+  .order-actions .cancel-button {
+    width: 100%;
+    min-width: unset;
+  }
+}
 .expand-icon {
   transition: transform 0.2s ease;
   color: #6b7280;
@@ -2205,7 +2306,8 @@ textarea.modal-input.comment {
   background: #f3f4f6;
   color: #4b5563;
   border: none;
-  margin-top: 8px;
+  width: 100%;
+  display: block;
 }
 
 .edit-button:hover {
@@ -2280,4 +2382,206 @@ textarea.modal-input.comment {
   color: #9ca3af;
   letter-spacing: 0.75px;
   font-size: 16px;
+}
+
+.order-details .edit-button {
+  margin-top: 12px;
+  padding: 6px 12px;
+  font-size: 14px;
+  background: #f3f4f6;
+  border: none;
+  border-radius: 6px;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+  display: block;
+}
+
+.order-details .edit-button:hover {
+  background: #e5e7eb;
+}
+
+.order-details .edit-form {
+  margin-top: 12px;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.order-details textarea.modal-input {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.modal-actions .modal-button {
+  flex: 1;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #4b5563;
+  margin-bottom: 8px;
+}
+
+.modal-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.modal-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+textarea.modal-input {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.edit-button:disabled,
+.cancel-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #e5e7eb;
+  color: #9ca3af;
+}
+
+.edit-button:disabled:hover,
+.cancel-button:disabled:hover {
+  background: #e5e7eb;
+  transform: none;
+}
+
+/* Add tooltip styles */
+.edit-button[title],
+.cancel-button[title] {
+  position: relative;
+}
+
+.edit-button[title]:hover::after,
+.cancel-button[title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  background: #374151;
+  color: white;
+  font-size: 12px;
+  border-radius: 4px;
+  white-space: nowrap;
+  z-index: 10;
+  margin-bottom: 8px;
+}
+
+.stock-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stock-quantity {
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.product-stock {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.product-stock.in-stock {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.product-stock.out-stock {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.stock-details {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 4px;
+}
+
+.stock-quantity,
+.cart-quantity {
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.cart-quantity {
+  color: #2563eb;
+}
+
+.cart-item-error {
+  background: #fef2f2;
+  border: 1px solid #fee2e2;
+}
+
+.stock-warning {
+  color: #dc2626;
+  font-size: 12px;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.checkout-warning {
+  color: #dc2626;
+  font-size: 13px;
+  text-align: center;
+  margin-top: 8px;
+}
+
+.checkout-btn:disabled {
+  background: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.checkout-btn:disabled:hover {
+  background: #e5e7eb;
+  transform: none;
+  box-shadow: none;
+}
+
+.checkout-btn[title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  background: #374151;
+  color: white;
+  font-size: 12px;
+  border-radius: 4px;
+  white-space: nowrap;
+  z-index: 10;
+  margin-bottom: 8px;
 }

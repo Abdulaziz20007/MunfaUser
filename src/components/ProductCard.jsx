@@ -5,12 +5,24 @@ import { useCart } from "../contexts/CartContext";
 import { useState } from "react";
 
 const ProductCard = ({ product }) => {
-  const { addToCart } = useCart();
+  const { addToCart, cart } = useCart();
   const [showPassword, setShowPassword] = useState(false);
+
+  // Convert stock number to boolean
+  const isInStock = product.stock > 0;
+
+  // Get current quantity in cart
+  const cartItem = cart.find((item) => item._id === product._id);
+  const currentCartQuantity = cartItem?.quantity || 0;
+
+  // Check if we can add more to cart
+  const canAddToCart = isInStock && currentCartQuantity < product.stock;
 
   const handleAddToCart = (e) => {
     e.preventDefault();
     e.stopPropagation();
+
+    if (!canAddToCart) return;
 
     // Create floating animation
     const button = e.currentTarget;
@@ -89,15 +101,22 @@ const ProductCard = ({ product }) => {
             <span>Pachkada: {product.quantityInBox} dona</span>
           </div>
           <div className="stock-action">
-            {product.stock ? (
-              <span className="product-stock in-stock">Sotuvda bor</span>
+            {isInStock ? (
+              <div className="stock-info">
+                <span className="product-stock in-stock">Sotuvda bor</span>
+              </div>
             ) : (
               <span className="product-stock out-stock">Sotuvda yo'q</span>
             )}
             <button
               onClick={handleAddToCart}
               className="add-to-cart-btn"
-              disabled={!product.stock}
+              disabled={!canAddToCart}
+              title={
+                !canAddToCart && currentCartQuantity >= product.stock
+                  ? "Maksimal miqdorga yetdi"
+                  : ""
+              }
               aria-label="Add to cart"
             >
               <svg
@@ -115,6 +134,14 @@ const ProductCard = ({ product }) => {
               </svg>
             </button>
           </div>
+          <div className="stock-details">
+            <span className="stock-quantity">Mavjud: {product.stock} dona</span>
+            {currentCartQuantity > 0 && (
+              <span className="cart-quantity">
+                Savatcha: {currentCartQuantity} dona
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </Link>
@@ -129,7 +156,7 @@ ProductCard.propTypes = {
     images: PropTypes.arrayOf(PropTypes.string).isRequired,
     size: PropTypes.string.isRequired,
     quantityInBox: PropTypes.number.isRequired,
-    stock: PropTypes.bool.isRequired,
+    stock: PropTypes.number.isRequired,
   }).isRequired,
 };
 

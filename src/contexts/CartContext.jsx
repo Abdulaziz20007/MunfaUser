@@ -1,13 +1,61 @@
 import { createContext, useContext, useState, useEffect } from "react";
+import { config } from "../config";
 
 const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState(() => {
-    // Initialize from localStorage during first render
     const savedCart = localStorage.getItem("cart");
     return savedCart ? JSON.parse(savedCart) : [];
   });
+
+  const refreshStockQuantities = async () => {
+    if (cart.length === 0) return;
+
+    try {
+      const response = await fetch(`${config.apiUrl}/product/ids`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ids: cart.map((item) => item._id),
+        }),
+      });
+
+      if (!response.ok) return;
+
+      const products = await response.json();
+
+      // Update cart items with new stock quantities
+      setCart((prevCart) => {
+        const updatedCart = prevCart.map((cartItem) => {
+          const product = products.find((p) => p._id === cartItem._id);
+          if (product) {
+            return {
+              ...cartItem,
+              stock: product.stock,
+            };
+          }
+          return cartItem;
+        });
+
+        localStorage.setItem("cart", JSON.stringify(updatedCart));
+        return updatedCart;
+      });
+    } catch (error) {
+      console.error("Error refreshing stock quantities:", error);
+    }
+  };
+
+  // Refresh stock quantities every minute and when cart changes
+  useEffect(() => {
+    refreshStockQuantities();
+
+    const interval = setInterval(refreshStockQuantities, 60000);
+
+    return () => clearInterval(interval);
+  }, [cart.length]); // Only re-run when number of items in cart changes
 
   const addToCart = (product) => {
     setCart((prevCart) => {
@@ -60,6 +108,7 @@ export const CartProvider = ({ children }) => {
     updateQuantity,
     removeFromCart,
     clearCart,
+    refreshStockQuantities, // Expose this if you need to manually refresh
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

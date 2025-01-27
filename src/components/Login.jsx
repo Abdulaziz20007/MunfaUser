@@ -49,72 +49,15 @@ const Login = ({ isOpen, onClose, onLogin, showAlert }) => {
     setError("");
 
     if (!validatePhone(phone)) {
-      setError("Telefon raqam 9 ta raqamdan iborat bo'lishi kerak");
+      setError("Telefon raqami noto'g'ri");
       setLoading(false);
       return;
     }
 
     try {
-      const checkResponse = await fetch(`${config.apiUrl}/user/identify`, {
+      const response = await fetch(`${config.apiUrl}/user/identify`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ phone }),
-      });
-
-      const checkData = await checkResponse.json();
-
-      if (checkResponse.status === 302 && checkData.found) {
-        if (checkData.isVerified) {
-          if (checkData.isRegistered) {
-            setShowPassword(true);
-            showAlert("Parolni kiriting", "success");
-          } else {
-            setShowRegister(true);
-            showAlert("Ro'yxatdan o'tishni yakunlang", "success");
-          }
-        } else {
-          const response = await fetch(`${config.apiUrl}/user/send`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ phone }),
-          });
-
-          const data = await response.json();
-
-          if (response.ok || data.otpId) {
-            setOtpId(data.otpId);
-            setShowOtp(true);
-            setError("");
-            if (data.msg === "Tasdiqlash kodi avval yuborilgan") {
-              showAlert("Tasdiqlash kodi avval yuborilgan", "success");
-            } else {
-              showAlert("Tasdiqlash kodi yuborildi", "success");
-            }
-          } else {
-            setError(data.msg || "Xatolik yuz berdi");
-            showAlert(data.msg || "Xatolik yuz berdi", "error");
-          }
-        }
-      } else {
-        await sendOtp();
-      }
-    } catch (err) {
-      console.error("Phone submit error:", err);
-      setError("Xatolik yuz berdi");
-      showAlert("Xatolik yuz berdi", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const sendOtp = async () => {
-    try {
-      const response = await fetch(`${config.apiUrl}/user/create`, {
-        method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
@@ -123,16 +66,41 @@ const Login = ({ isOpen, onClose, onLogin, showAlert }) => {
 
       const data = await response.json();
 
-      if (response.ok || data.otpId) {
-        setOtpId(data.otpId);
-        setShowOtp(true);
-        setError("");
+      if (response.status === 302 && data.found) {
+        if (data.isVerified) {
+          // User exists and verified, show password input
+          setShowPassword(true);
+          showAlert("Parolni kiriting", "success");
+        } else {
+          // User exists but not verified, request OTP
+          const otpResponse = await fetch(`${config.apiUrl}/user/send`, {
+            method: "POST",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ phone }),
+          });
+
+          const otpData = await otpResponse.json();
+
+          if (otpResponse.ok || otpData.otpId) {
+            setOtpId(otpData.otpId);
+            setShowOtp(true);
+            showAlert("Tasdiqlash kodini kiriting", "success");
+          } else {
+            setError(otpData.msg || "Tasdiqlash kodi yuborishda xatolik");
+          }
+        }
       } else {
-        setError(data.msg || "Xatolik yuz berdi");
+        // New user, show registration
+        setShowRegister(true);
       }
+      setError("");
     } catch (err) {
-      console.error("Send OTP error:", err);
       setError("Xatolik yuz berdi");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -144,6 +112,7 @@ const Login = ({ isOpen, onClose, onLogin, showAlert }) => {
     try {
       const response = await fetch(`${config.apiUrl}/user/login`, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
@@ -151,24 +120,20 @@ const Login = ({ isOpen, onClose, onLogin, showAlert }) => {
           phone,
           password,
         }),
-        withCredentials: true,
       });
 
       const data = await response.json();
 
       if (response.ok) {
         localStorage.setItem("accessToken", data.accessToken);
-        localStorage.setItem("refreshToken", data.refreshToken);
         onClose();
         showAlert("Muvaffaqiyatli kirdingiz", "success");
         window.location.reload();
       } else {
         setError(data.msg || "Xatolik yuz berdi");
-        showAlert(data.msg || "Xatolik yuz berdi", "error");
       }
     } catch (err) {
       setError("Xatolik yuz berdi");
-      showAlert("Xatolik yuz berdi", "error");
     } finally {
       setLoading(false);
     }
@@ -182,6 +147,7 @@ const Login = ({ isOpen, onClose, onLogin, showAlert }) => {
     try {
       const response = await fetch(`${config.apiUrl}/user/register`, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
@@ -191,44 +157,37 @@ const Login = ({ isOpen, onClose, onLogin, showAlert }) => {
           surname,
           password,
         }),
-        withCredentials: true,
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        showAlert("Muvaffaqiyatli ro'yxatdan o'tdingiz", "success");
-        const loginResponse = await fetch(`${config.apiUrl}/user/login`, {
+        showAlert("Tasdiqlash kodini kiriting", "success");
+        // Request OTP after successful registration
+        const otpResponse = await fetch(`${config.apiUrl}/user/send`, {
           method: "POST",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            phone,
-            password,
-          }),
-          withCredentials: true,
+          body: JSON.stringify({ phone }),
         });
 
-        const loginData = await loginResponse.json();
+        const otpData = await otpResponse.json();
 
-        if (loginResponse.ok) {
-          localStorage.setItem("accessToken", loginData.accessToken);
-          localStorage.setItem("refreshToken", loginData.refreshToken);
-          onClose();
-          window.location.reload();
+        if (otpResponse.ok || otpData.otpId) {
+          setOtpId(otpData.otpId);
+          setShowRegister(false);
+          setShowOtp(true);
+          setError("");
         } else {
-          setError(loginData.msg || "Kirish xatoligi yuz berdi");
-          showAlert(loginData.msg || "Kirish xatoligi yuz berdi", "error");
+          setError(otpData.msg || "Tasdiqlash kodi yuborishda xatolik");
         }
       } else {
         setError(data.msg || "Ro'yxatdan o'tishda xatolik yuz berdi");
-        showAlert(data.msg || "Ro'yxatdan o'tishda xatolik yuz berdi", "error");
       }
     } catch (err) {
-      console.error("Registration error:", err);
       setError("Xatolik yuz berdi");
-      showAlert("Xatolik yuz berdi", "error");
     } finally {
       setLoading(false);
     }
@@ -242,6 +201,7 @@ const Login = ({ isOpen, onClose, onLogin, showAlert }) => {
     try {
       const response = await fetch(`${config.apiUrl}/user/verify`, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
@@ -250,23 +210,22 @@ const Login = ({ isOpen, onClose, onLogin, showAlert }) => {
           otp,
           otpId,
         }),
-        withCredentials: true,
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        setShowRegister(true);
-        setShowOtp(false);
         showAlert("Telefon raqam tasdiqlandi", "success");
+        // Show login form after successful verification
+        setShowOtp(false);
+        setShowPassword(true);
+        setOtp("");
+        setOtpId("");
       } else {
-        setError(data.msg || "Xatolik yuz berdi");
-        showAlert(data.msg || "Xatolik yuz berdi", "error");
+        setError(data.msg || "Tasdiqlash kodini tekshirishda xatolik");
       }
     } catch (err) {
-      console.error("Verify OTP error:", err);
       setError("Xatolik yuz berdi");
-      showAlert("Xatolik yuz berdi", "error");
     } finally {
       setLoading(false);
     }
@@ -276,11 +235,11 @@ const Login = ({ isOpen, onClose, onLogin, showAlert }) => {
     try {
       const response = await fetch(`${config.apiUrl}/user/send`, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ phone }),
-        withCredentials: true,
       });
 
       const data = await response.json();
@@ -353,7 +312,7 @@ const Login = ({ isOpen, onClose, onLogin, showAlert }) => {
               />
             </div>
             <button type="submit" className="modal-button" disabled={loading}>
-              {loading ? "Yuborilmoqda..." : "Kodni yuborish"}
+              {loading ? "Yuklanmoqda..." : "Davom etish"}
             </button>
           </form>
         ) : showOtp ? (

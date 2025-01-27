@@ -1,30 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useCart } from "../contexts/CartContext";
+import { useApp } from "../contexts/AppContext";
 import { config } from "../config";
 import { fetchWithAuth } from "../utils/auth";
 
 const Checkout = () => {
   const { isAuthenticated, openLoginModal } = useAuth();
   const { cart, clearCart } = useCart();
+  const { showAlert } = useApp();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [address, setAddress] = useState("");
   const [comment, setComment] = useState("");
-  const [showAlert, setShowAlert] = useState(false);
-
-  useEffect(() => {
-    if (showAlert) {
-      const timer = setTimeout(() => {
-        setShowAlert(false);
-        navigate("/");
-      }, 2000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [showAlert, navigate]);
 
   if (!isAuthenticated) {
     return (
@@ -67,32 +57,45 @@ const Checkout = () => {
     try {
       const response = await fetchWithAuth(`${config.apiUrl}/user/order`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        },
         body: JSON.stringify({
           items: cart.map((item) => ({
             productId: item._id,
             quantity: item.quantity,
           })),
-          address,
-          comment,
-          total: totalAmount,
+          address: address.trim(),
+          comment: comment.trim(),
+          total: cart.reduce(
+            (sum, item) => sum + item.price * item.quantity,
+            0
+          ),
         }),
       });
 
       const data = await response.json();
 
-      if (response.ok) {
-        clearCart();
-        setShowAlert(true);
-      } else {
-        setError(data.message || "Xatolik yuz berdi");
+      // Check for error first
+      if (data.msg && data.msg.includes("yetarli miqdor mavjud emas")) {
+        showAlert(data.msg, "error");
+        setError(data.msg);
+        return;
       }
+
+      // Then check response status
+      if (!response.ok) {
+        showAlert(data.msg || "Xatolik yuz berdi", "error");
+        setError(data.msg || "Xatolik yuz berdi");
+        return;
+      }
+
+      console.log(data);
+
+      // Only if no errors and response is ok
+      clearCart();
+      showAlert("Buyurtma muvaffaqiyatli joylandi", "success");
+      navigate("/profile");
     } catch (err) {
-      console.error("Order error:", err);
-      setError("Xatolik yuz berdi. Iltimos qaytadan urinib ko'ring");
+      showAlert("Xatolik yuz berdi", "error");
+      setError("Xatolik yuz berdi");
     } finally {
       setLoading(false);
     }
@@ -100,26 +103,6 @@ const Checkout = () => {
 
   return (
     <div className="checkout-container">
-      {showAlert && (
-        <div className="alert-overlay">
-          <div className="alert-success">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-              <polyline points="22 4 12 14.01 9 11.01" />
-            </svg>
-            <span>Buyurtma muvaffaqiyatli joylandi!</span>
-          </div>
-        </div>
-      )}
-
       <h2 className="section-title">Buyurtma berish</h2>
 
       <div className="checkout-content">

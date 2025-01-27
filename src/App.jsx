@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Bottombar from "./components/bottombar";
+import ScrollToTop from "./components/ScrollToTop";
 import HomePage from "./pages/HomePage";
 import ProductsPage from "./pages/ProductsPage";
 import CartPage from "./pages/CartPage";
@@ -16,6 +17,7 @@ const App = () => {
       <AuthProvider>
         <CartProvider>
           <Router>
+            <ScrollToTop />
             <div className="min-h-screen">
               <Routes>
                 <Route path="/" element={<HomePage />} />

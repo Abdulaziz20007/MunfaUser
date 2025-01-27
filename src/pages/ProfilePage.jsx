@@ -6,6 +6,7 @@ import { config } from "../config";
 import { fetchWithAuth } from "../utils/auth";
 import Header from "../components/Header";
 import Profile from "../components/Profile";
+import EditOrderModal from "../components/EditOrderModal";
 
 const ProfilePage = () => {
   const { isAuthenticated, logout } = useAuth();
@@ -28,6 +29,11 @@ const ProfilePage = () => {
     confirmPassword: "",
   });
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [editingOrder, setEditingOrder] = useState(null);
+  const [orderForm, setOrderForm] = useState({
+    comment: "",
+    address: "",
+  });
 
   const fetchOrders = async () => {
     try {
@@ -41,14 +47,14 @@ const ProfilePage = () => {
     }
   };
 
-  const handleCancelOrder = async (orderId) => {
+  const handleCancelOrder = async (orderNumber) => {
     showAlert({
       message: "Buyurtmani bekor qilishni xohlaysizmi?",
       type: "confirm",
       onConfirm: async () => {
         try {
           const response = await fetchWithAuth(
-            `${config.apiUrl}/user/order/${orderId}/cancel`,
+            `${config.apiUrl}/user/order/${orderNumber}/cancel`,
             {
               method: "PUT",
             }
@@ -62,17 +68,12 @@ const ProfilePage = () => {
             // Refresh orders after cancellation
             fetchOrders();
           } else {
-            showAlert({
-              message: "Xatolik yuz berdi",
-              type: "error",
-            });
+            const data = await response.json();
+            showAlert(data.msg || "Xatolik yuz berdi", "error");
           }
         } catch (err) {
           console.error("Error cancelling order:", err);
-          showAlert({
-            message: "Xatolik yuz berdi",
-            type: "error",
-          });
+          showAlert("Xatolik yuz berdi", "error");
         }
       },
     });
@@ -109,14 +110,18 @@ const ProfilePage = () => {
       name: user.name,
       surname: user.surname,
     });
+    setEditingOrder(null);
+    setOrderForm({ comment: "", address: "" });
   };
 
   const handleSaveEdit = async () => {
     try {
+      const token = localStorage.getItem("accessToken");
       const response = await fetchWithAuth(`${config.apiUrl}/user/update`, {
-        method: "PUT",
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           name: editForm.name,
@@ -137,16 +142,10 @@ const ProfilePage = () => {
         });
       } else {
         const data = await response.json();
-        showAlert({
-          message: data.message || "Xatolik yuz berdi",
-          type: "error",
-        });
+        showAlert(data.msg || "Xatolik yuz berdi", "error");
       }
     } catch (err) {
-      showAlert({
-        message: "Xatolik yuz berdi",
-        type: "error",
-      });
+      showAlert("Xatolik yuz berdi", "error");
     }
   };
 
@@ -207,21 +206,29 @@ const ProfilePage = () => {
         });
       } else {
         const data = await response.json();
-        showAlert({
-          message: data.message || "Xatolik yuz berdi",
-          type: "error",
-        });
+        showAlert(data.msg || "Xatolik yuz berdi", "error");
       }
     } catch (err) {
-      showAlert({
-        message: "Xatolik yuz berdi",
-        type: "error",
-      });
+      showAlert("Xatolik yuz berdi", "error");
     }
   };
 
   const handleUserUpdate = (updatedUser) => {
     setUser(updatedUser);
+  };
+
+  const handleEditOrder = (order) => {
+    setEditingOrder(order);
+  };
+
+  const handleEditSuccess = () => {
+    fetchOrders();
+    showAlert("Buyurtma muvaffaqiyatli yangilandi", "success");
+  };
+
+  // Helper function to check if order is editable
+  const isOrderEditable = (status) => {
+    return status === "pending";
   };
 
   useEffect(() => {
@@ -326,7 +333,9 @@ const ProfilePage = () => {
               </div>
             ) : (
               <div className="orders-list">
-                {orders.map((order) => (
+                {orders
+                  .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                  .map((order) => (
                   <div key={order._id} className="order-card">
                     <div
                       className="order-header"
@@ -334,6 +343,9 @@ const ProfilePage = () => {
                       style={{ cursor: "pointer" }}
                     >
                       <div className="order-meta">
+                        <span className="order-number">
+                          #{order.orderNumber}
+                        </span>
                         <span className="order-date">
                           {new Date(order.createdAt).toLocaleDateString()}
                         </span>
@@ -406,28 +418,91 @@ const ProfilePage = () => {
                           ))}
                         </div>
                         <div className="order-details">
-                          {order.comment && (
-                            <div className="order-comment">
-                              <strong>Izoh</strong>
-                              {order.comment}
+                          {editingOrder === order._id ? (
+                            <div className="edit-form">
+                              <div className="form-group">
+                                <label className="form-label">Izoh</label>
+                                <textarea
+                                  value={orderForm.comment}
+                                  onChange={(e) =>
+                                    setOrderForm((prev) => ({
+                                      ...prev,
+                                      comment: e.target.value,
+                                    }))
+                                  }
+                                  className="modal-input"
+                                  placeholder="Izoh qoldiring"
+                                />
+                              </div>
+                              <div className="form-group">
+                                <label className="form-label">Manzil *</label>
+                                <textarea
+                                  value={orderForm.address}
+                                  onChange={(e) =>
+                                    setOrderForm((prev) => ({
+                                      ...prev,
+                                      address: e.target.value,
+                                    }))
+                                  }
+                                  className="modal-input"
+                                  placeholder="Manzilni kiriting"
+                                  required
+                                />
+                              </div>
+                              <div className="modal-actions">
+                                <button
+                                  onClick={() => handleUpdateOrder(order._id)}
+                                  className="modal-button"
+                                >
+                                  Saqlash
+                                </button>
+                                <button
+                                  onClick={handleCancelEdit}
+                                  className="modal-button secondary"
+                                >
+                                  Bekor qilish
+                                </button>
+                              </div>
                             </div>
+                          ) : (
+                            <>
+                              {order.comment && (
+                                <div className="order-comment">
+                                  <strong>Izoh:</strong> {order.comment}
+                                </div>
+                              )}
+                              <div className="order-address">
+                                <strong>Manzil:</strong> {order.address}
+                              </div>
+                            </>
                           )}
-                          <div className="order-address">
-                            <strong>Manzil</strong>
-                            {order.address}
-                          </div>
                         </div>
-                        {order.status === "pending" && (
+                        <div className="order-actions">
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCancelOrder(order._id);
-                            }}
+                            onClick={() => handleEditOrder(order)}
+                            className="edit-button"
+                            disabled={!isOrderEditable(order.status)}
+                            title={
+                              !isOrderEditable(order.status)
+                                ? "Faqat kutilayotgan buyurtmalarni tahrirlash mumkin"
+                                : ""
+                            }
+                          >
+                            O'zgartirish
+                          </button>
+                          <button
+                            onClick={() => handleCancelOrder(order.orderNumber)}
                             className="cancel-button"
+                            disabled={!isOrderEditable(order.status)}
+                            title={
+                              !isOrderEditable(order.status)
+                                ? "Faqat kutilayotgan buyurtmalarni bekor qilish mumkin"
+                                : ""
+                            }
                           >
                             Bekor qilish
                           </button>
-                        )}
+                        </div>
                       </>
                     )}
                   </div>
@@ -592,6 +667,14 @@ const ProfilePage = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {editingOrder && (
+          <EditOrderModal
+            order={editingOrder}
+            onClose={() => setEditingOrder(null)}
+            onSuccess={handleEditSuccess}
+          />
         )}
       </div>
       <Profile

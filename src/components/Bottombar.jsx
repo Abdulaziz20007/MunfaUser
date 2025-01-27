@@ -12,6 +12,27 @@ import {
 } from "@heroicons/react/24/solid";
 import { useCart } from "../contexts/CartContext";
 
+const navItems = [
+  {
+    name: "Bosh sahifa",
+    path: "/",
+    icon: HomeIcon,
+    activeIcon: HomeIconSolid,
+  },
+  {
+    name: "Mahsulotlar",
+    path: "/products",
+    icon: ShoppingBagIcon,
+    activeIcon: ShoppingBagIconSolid,
+  },
+  {
+    name: "Savatcha",
+    path: "/cart",
+    icon: ShoppingCartIcon,
+    activeIcon: ShoppingCartIconSolid,
+  },
+];
+
 const Bottombar = () => {
   const location = useLocation();
   const { cart } = useCart();
@@ -20,7 +41,6 @@ const Bottombar = () => {
 
   useEffect(() => {
     if (cart.length > prevCountRef.current && badgeRef.current) {
-      // Remove the class and force reflow to restart animation
       badgeRef.current.classList.remove("pop");
       badgeRef.current.offsetHeight;
       badgeRef.current.classList.add("pop");
@@ -28,31 +48,7 @@ const Bottombar = () => {
     prevCountRef.current = cart.length;
   }, [cart]);
 
-  const getTotalItems = () => {
-    return cart.reduce((total, item) => total + item.quantity, 0);
-  };
-
-  const navItems = [
-    {
-      name: "Bosh sahifa",
-      path: "/",
-      icon: HomeIcon,
-      activeIcon: HomeIconSolid,
-    },
-    {
-      name: "Mahsulotlar",
-      path: "/products",
-      icon: ShoppingBagIcon,
-      activeIcon: ShoppingBagIconSolid,
-    },
-    {
-      name: "Savatcha",
-      path: "/cart",
-      icon: ShoppingCartIcon,
-      activeIcon: ShoppingCartIconSolid,
-      badge: getTotalItems(),
-    },
-  ];
+  const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
 
   return (
     <nav className="bottom-nav">
@@ -70,12 +66,9 @@ const Bottombar = () => {
             >
               <div className="nav-icon-wrapper">
                 <IconComponent className="nav-icon" />
-                {item.badge > 0 && (
-                  <span
-                    ref={item.path === "/cart" ? badgeRef : null}
-                    className="nav-badge"
-                  >
-                    {item.badge}
+                {item.path === "/cart" && totalItems > 0 && (
+                  <span ref={badgeRef} className="nav-badge">
+                    {totalItems}
                   </span>
                 )}
               </div>

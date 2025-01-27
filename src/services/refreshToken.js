@@ -4,7 +4,7 @@ export const refreshTokens = async () => {
   try {
     const response = await fetch(`${config.apiUrl}/user/refresh`, {
       method: "POST",
-      withCredentials: true,
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
       },
