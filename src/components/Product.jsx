@@ -55,6 +55,10 @@ const Product = () => {
   const handleAddToCart = () => {
     if (!product.stock) return;
 
+    // Check if adding one more would exceed stock
+    const currentQuantity = cartItem ? cartItem.quantity : 0;
+    if (currentQuantity >= product.stock) return;
+
     const cartProduct = {
       _id: product._id,
       name: product.name,
@@ -70,12 +74,17 @@ const Product = () => {
     const badge = document.querySelector(".nav-badge");
     if (badge) {
       badge.classList.remove("pop");
-      void badge.offsetWidth; // Trigger reflow
+      void badge.offsetWidth;
       badge.classList.add("pop");
     }
   };
 
   const handleUpdateQuantity = (newQuantity) => {
+    // Check if new quantity would exceed stock
+    if (newQuantity > product.stock) {
+      return;
+    }
+
     if (newQuantity < 1) {
       removeFromCart(id);
     } else {
@@ -220,6 +229,12 @@ const Product = () => {
                   <button
                     className="quantity-btn"
                     onClick={() => handleUpdateQuantity(cartItem.quantity + 1)}
+                    disabled={cartItem.quantity >= product.stock}
+                    title={
+                      cartItem.quantity >= product.stock
+                        ? "Maksimal miqdorga yetdi"
+                        : ""
+                    }
                   >
                     +
                   </button>
@@ -228,6 +243,9 @@ const Product = () => {
                   Jami: {(cartItem.quantity * product.price).toLocaleString()}{" "}
                   so'm
                 </div>
+                {cartItem.quantity >= product.stock && (
+                  <div className="stock-warning">Maksimal miqdorga yetdi</div>
+                )}
               </div>
             ) : (
               <button

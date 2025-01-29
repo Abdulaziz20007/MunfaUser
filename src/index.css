@@ -2546,8 +2546,8 @@ textarea.modal-input {
 .stock-warning {
   color: #dc2626;
   font-size: 12px;
+  text-align: center;
   margin-top: 4px;
-  font-weight: 500;
 }
 
 .checkout-warning {

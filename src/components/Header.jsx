@@ -2,7 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
 const Header = () => {
-  const { isAuthenticated, openLoginModal, logout } = useAuth();
+  const { isAuthenticated, openLoginModal } = useAuth();
   const navigate = useNavigate();
 
   return (
@@ -14,17 +14,12 @@ const Header = () => {
           </Link>
 
           {isAuthenticated ? (
-            <div className="auth-buttons">
-              <button
-                onClick={() => navigate("/profile")}
-                className="auth-button"
-              >
-                Profil
-              </button>
-              <button onClick={logout} className="auth-button">
-                Chiqish
-              </button>
-            </div>
+            <button
+              onClick={() => navigate("/profile")}
+              className="auth-button"
+            >
+              Profil
+            </button>
           ) : (
             <button onClick={openLoginModal} className="auth-button">
               Kirish
