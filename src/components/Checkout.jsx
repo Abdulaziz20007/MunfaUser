@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useCart } from "../contexts/CartContext";
 import { useApp } from "../contexts/AppContext";
+import { useTelegram } from "../contexts/TelegramContext";
 import { config } from "../config";
 import { fetchWithAuth } from "../utils/auth";
 
@@ -15,6 +16,18 @@ const Checkout = () => {
   const [error, setError] = useState("");
   const [address, setAddress] = useState("");
   const [comment, setComment] = useState("");
+
+  const { webApp, showMainButton, hideMainButton } = useTelegram();
+
+  useEffect(() => {
+    if (webApp) {
+      showMainButton("Buyurtma berish", handleSubmit);
+
+      return () => {
+        hideMainButton();
+      };
+    }
+  }, [webApp, address, comment]);
 
   if (!isAuthenticated) {
     return (
@@ -164,9 +177,11 @@ const Checkout = () => {
             />
           </div>
 
-          <button type="submit" className="modal-button" disabled={loading}>
-            {loading ? "Yuborilmoqda..." : "Buyurtma berish"}
-          </button>
+          {!webApp && (
+            <button type="submit" className="modal-button" disabled={loading}>
+              {loading ? "Yuborilmoqda..." : "Buyurtma berish"}
+            </button>
+          )}
         </form>
       </div>
     </div>
