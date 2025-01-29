@@ -1,4 +1,4 @@
 export const config = {
-  apiUrl: "http://localhost:3300/api",
-  baseUrl: "http://localhost:3300",
+  apiUrl: "https://niggastyle.life/api",
+  baseUrl: "https://niggastyle.life",
 };
